@@ -36,7 +36,7 @@ if (!isBuildTime) {
 export const env = {
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY!.trim(),
   upstashRedisUrl: process.env.UPSTASH_REDIS_REST_URL ?? undefined,
   upstashRedisToken: process.env.UPSTASH_REDIS_REST_TOKEN ?? undefined,
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? undefined,
