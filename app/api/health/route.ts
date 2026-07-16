@@ -12,8 +12,13 @@ async function checkDatabase(): Promise<'ok' | 'error'> {
   try {
     const supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey)
     const { error } = await supabase.from('profiles').select('count').limit(1)
-    return error ? 'error' : 'ok'
-  } catch {
+    if (error) {
+      logger.error('Database health check failed', { error: error.message, code: error.code, hint: error.hint })
+      return 'error'
+    }
+    return 'ok'
+  } catch (e) {
+    logger.error('Database health check threw', { error: e instanceof Error ? e.message : String(e) })
     return 'error'
   }
 }
