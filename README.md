@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# roastmycv
 
-## Getting Started
+AI-powered CV feedback. Upload a PDF, get an instant roast plus actionable recommendations on ATS-readiness, formatting, and impact.
 
-First, run the development server:
+## Features
+
+- PDF upload and parsing
+- AI-generated critique: tone (roast) + constructive analysis
+- ATS-readiness scoring
+- Sectioned feedback: formatting, content, impact
+- Anonymous mock review flow
+- Rate limiting via Upstash Redis
+- Supabase auth (email-based sessions)
+- Sentry error tracking (client, server, edge)
+- Containerized for reproducible local dev
+
+## Tech Stack
+
+| Layer | Choice |
+|-------|--------|
+| Framework | Next.js (app router) |
+| Auth / DB | Supabase (`@supabase/auth-helpers-nextjs`, `@supabase/ssr`, `supabase-js`) |
+| PDF | `canvas` |
+| Rate limit | Upstash Redis (`@upstash/ratelimit`) |
+| Error tracking | Sentry |
+| Tests | vitest |
+| Container | Docker / docker-compose |
+
+## Quick Start
 
 ```bash
+docker compose up --build
+# or
+npm install
+cp .env.local.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App boots at `http://localhost:3000`. Migration: paste `SUPABASE_SCHEMA.sql` into the Supabase SQL editor before first run.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+.
+├── app/                   # Next.js app router (routes, layouts, server actions)
+├── components/            # UI components
+├── lib/                   # AI prompts, scoring, parsers, helpers
+├── supabase/              # Migrations / seed
+├── mocks/                 # Test fixtures
+├── scripts/               # One-off maintenance scripts
+├── public/                # Static assets
+├── middleware.ts          # Auth gate + edge runtime
+├── instrumentation.ts     # Sentry init (client/server/edge)
+├── sentry.client.config.ts
+├── sentry.server.config.ts
+├── sentry.edge.config.ts
+├── Dockerfile
+├── docker-compose.yml
+└── SUPABASE_SCHEMA.sql
+```
 
-## Learn More
+## Configuration
 
-To learn more about Next.js, take a look at the following resources:
+Server-side unless noted.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+- `OPENAI_API_KEY`
+- `SENTRY_DSN`
+- `NEXT_PUBLIC_SENTRY_DSN` (optional, client-side DSN)
+- `SENTRY_AUTH_TOKEN` (build-time only, for source maps)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
+Build target: standalone Node server via Dockerfile. Set the env vars above; Sentry source maps upload on build. Edge middleware is rate-limit-aware.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
