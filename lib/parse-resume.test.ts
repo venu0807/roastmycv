@@ -4,6 +4,7 @@ import { parseResume } from '@/lib/parse-resume'
 
 // Mock pdfjs-dist and mammoth
 vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
+  GlobalWorkerOptions: { workerSrc: '' },
   getDocument: vi.fn(() => ({
     promise: Promise.resolve({
       numPages: 1,

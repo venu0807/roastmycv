@@ -27,55 +27,68 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    // Auth-optional: check if user is signed in, but don't block anonymous
     const { data: { user } } = await supabase.auth.getUser();
     const isAuthenticated = !!user;
 
-    // Determine rate limit tier
-    let maxRequests = 5;
+    // ── Check access via monthly SQL function ────────────────────────────
+    let remaining = -1;
     let tier = 'free';
-    let profile: { tier: string; roasts_today: number; last_roast_date: string; total_roasts: number } | null = null;
+    let downloadCredits = 0;
 
     if (isAuthenticated) {
-      const { data: p } = await supabase
-        .from('profiles')
-        .select('tier, roasts_today, last_roast_date, total_roasts')
-        .eq('id', user.id)
-        .single();
+      const { data: access, error: accessError } = await supabase
+        .rpc('check_roast_access', { check_user_id: user.id });
 
-      profile = p;
-      tier = profile?.tier || 'free';
-      if (tier !== 'free') maxRequests = 30;
+      if (accessError) {
+        logger.error('check_roast_access failed', { userId: user.id, error: accessError.message });
+        return NextResponse.json({ error: 'Access check failed' }, { status: 500 });
+      }
+
+      const result = Array.isArray(access) ? access[0] : access;
+      if (!result?.can_roast) {
+        const durationMs = Date.now() - startTime;
+        logger.apiResponse('POST', '/api/roast', 429, durationMs, { userId: user.id, tier: result?.tier, remaining: result?.remaining });
+        return NextResponse.json(
+          {
+            error: 'Free limit reached (5 roasts/month). Upgrade for unlimited!',
+            upgrade: true,
+            remaining: 0,
+            tier: result?.tier || 'free',
+          },
+          { status: 429 }
+        );
+      }
+
+      tier = result?.tier || 'free';
+      remaining = result?.remaining ?? -1;
+      downloadCredits = result?.download_credits ?? 0;
+    } else {
+      // Anonymous rate limiting via Upstash Redis
+      const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined;
+      const key = `anon:${ip || 'unknown'}`;
+      const { allowed, resetAt } = await checkRateLimit(key, 5);
+
+      if (!allowed) {
+        return NextResponse.json(
+          { error: 'Free trial used (5 roasts). Sign in for more!', upgrade: true, remaining: 0 },
+          { status: 429 }
+        );
+      }
     }
 
-    // Distributed rate limit via Upstash Redis (falls back to in-memory)
+    // ── Distributed rate limit via Upstash Redis (anti-abuse) ────────────
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined;
-    const key = `roast:${user?.id || `anon:${ip || 'unknown'}`}`;
-    const { allowed, remaining, resetAt } = await checkRateLimit(key, maxRequests);
+    const rlKey = isAuthenticated ? `roast:${user.id}` : `roast:anon:${ip || 'unknown'}`;
+    const { allowed: rlAllowed, remaining: rlRemaining, resetAt } = await checkRateLimit(rlKey, 30);
 
-    if (!allowed) {
-      const isFreeUser = !isAuthenticated || tier === 'free';
-      const durationMs = Date.now() - startTime;
-      logger.apiResponse('POST', '/api/roast', 429, durationMs, { key, remaining, tier });
+    if (!rlAllowed) {
       return NextResponse.json(
-        {
-          error: isFreeUser
-            ? 'Free trial used (1 roast/day). Sign in for unlimited!'
-            : 'Rate limit exceeded. Try again shortly.',
-          upgrade: isFreeUser,
-          resetAt: new Date(resetAt).toISOString(),
-        },
-        {
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': String(maxRequests),
-            'X-RateLimit-Remaining': String(remaining),
-            'X-RateLimit-Reset': String(Math.ceil(resetAt / 1000)),
-          },
-        }
+        { error: 'Rate limit exceeded. Try again shortly.', remaining: 0 },
+        { status: 429 }
       );
     }
 
+    // ── File validation ──────────────────────────────────────────────────
     let formData: FormData;
     try {
       formData = await req.formData();
@@ -109,7 +122,7 @@ export async function POST(req: NextRequest) {
       if (resumeData.sections[k]) resumeData.sections[k] = resumeData.sections[k]!.slice(0, 5000);
     }
 
-    // Cache check — skip redundant LLM calls for identical resumes
+    // ── Cache check — skip redundant LLM calls ───────────────────────────
     const cacheK = cacheKey(resumeData.text);
     const cached = await getCached(cacheK);
     let roastResult;
@@ -130,10 +143,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const today = new Date().toISOString().split('T')[0];
-
+    // ── Save to DB + increment usage ────────────────────────────────────
     if (isAuthenticated) {
-      // Save to DB for signed-in users
       const ext = file.type === 'application/pdf' ? 'pdf' : 'docx';
       const fileName = `roasts/${user.id}/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
@@ -145,23 +156,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
       }
 
-      const roastsToday = profile?.last_roast_date === today ? profile.roasts_today : 0;
-      const isFree = tier === 'free';
-
-      // Enforce daily limit for free users (double-check)
-      if (isFree && roastsToday >= 1) {
-        return NextResponse.json(
-          { error: 'Free trial used (1 roast/day). Sign in for unlimited!', upgrade: true },
-          { status: 429 }
-        );
-      }
+      // Mark as watermarked for free/starter, no watermark for paid tiers
+      const isWatermarked = tier === 'free' || tier === 'starter';
 
       const { error: insertError } = await supabase.from('roasts').insert({
         user_id: user.id,
         file_url: fileName,
         resume_json: resumeData,
         roast_json: roastResult,
-        is_watermarked: isFree,
+        is_watermarked: isWatermarked,
         user_tier_at_time: tier,
       }).select().single();
 
@@ -170,20 +173,32 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Save failed' }, { status: 500 });
       }
 
+      // Increment monthly usage count (silent — unlimited tiers return -1)
+      await supabase.rpc('increment_roast_count', { inc_user_id: user.id });
+
       const durationMs = Date.now() - startTime;
       logger.apiResponse('POST', '/api/roast', 200, durationMs, { userId: user.id, tier, cached: !!cached });
       return NextResponse.json({
         roast: roastResult,
-        remainingToday: isFree ? 0 : null,
+        remaining,
+        tier,
+        download_credits: downloadCredits,
+        can_download: tier !== 'free' && tier !== 'starter' || downloadCredits > 0,
       });
     }
 
-    // Anonymous — just return result, track via cookie
+    // ── Anonymous — just return result, track via cookie ─────────────────
+    const today = new Date().toISOString().split('T')[0];
     const anonRoasts = parseInt(cookieStore.get('anon_roasts')?.value || '0');
     const anonDate = cookieStore.get('anon_roasts_date')?.value;
     const effectiveAnonRoasts = anonDate === today ? anonRoasts : 0;
 
-    const response = NextResponse.json({ roast: roastResult });
+    const response = NextResponse.json({
+      roast: roastResult,
+      remaining: Math.max(0, 5 - effectiveAnonRoasts - 1),
+      tier: 'anon',
+      can_download: false,
+    });
     response.cookies.set('anon_roasts', String(effectiveAnonRoasts + 1), { maxAge: 86400, path: '/' });
     response.cookies.set('anon_roasts_date', today, { maxAge: 86400, path: '/' });
 

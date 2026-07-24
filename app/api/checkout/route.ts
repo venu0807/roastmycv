@@ -9,14 +9,61 @@ import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
-const PLANS = {
+const PLANS: Record<string, {
+  india: (userId: string) => { amount: number; currency: string; planId?: string; notes: Record<string, string>; receipt: string };
+  global: { amount: number; currency: string; priceId?: string; metadata: Record<string, string> };
+}> = {
+  starter: {
+    india: (userId: string) => ({
+      amount: 9900, currency: 'INR',
+      notes: { userId, tier: 'starter', receipt: `starter_${userId}_${Date.now()}` },
+      receipt: `starter_${userId}_${Date.now()}`,
+    }),
+    global: { amount: 199, currency: 'USD', priceId: process.env.STRIPE_PRICE_ROAST_STARTER, metadata: { tier: 'starter' } },
+  },
   pro_monthly: {
-    india: (userId: string) => ({ amount: 29900, currency: 'INR', planId: process.env.RAZORPAY_PLAN_ROAST_PRO, notes: { userId }, receipt: `pro_${userId}_${Date.now()}` }),
-    global: { amount: 499, currency: 'USD', priceId: process.env.STRIPE_PRICE_ROAST_PRO },
+    india: (userId: string) => ({
+      amount: 29900, currency: 'INR',
+      planId: process.env.RAZORPAY_PLAN_ROAST_PRO,
+      notes: { userId, tier: 'pro', plan_type: 'monthly' },
+      receipt: `pro_${userId}_${Date.now()}`,
+    }),
+    global: { amount: 499, currency: 'USD', priceId: process.env.STRIPE_PRICE_ROAST_PRO, metadata: { tier: 'pro', plan_type: 'monthly' } },
+  },
+  pro_annual: {
+    india: (userId: string) => ({
+      amount: 249000, currency: 'INR',
+      planId: process.env.RAZORPAY_PLAN_ROAST_PRO_ANNUAL,
+      notes: { userId, tier: 'pro', plan_type: 'annual' },
+      receipt: `pro_yr_${userId}_${Date.now()}`,
+    }),
+    global: { amount: 2490, currency: 'USD', priceId: process.env.STRIPE_PRICE_ROAST_PRO_ANNUAL, metadata: { tier: 'pro', plan_type: 'annual' } },
+  },
+  power_monthly: {
+    india: (userId: string) => ({
+      amount: 49900, currency: 'INR',
+      planId: process.env.RAZORPAY_PLAN_ROAST_POWER,
+      notes: { userId, tier: 'power', plan_type: 'monthly' },
+      receipt: `power_${userId}_${Date.now()}`,
+    }),
+    global: { amount: 999, currency: 'USD', priceId: process.env.STRIPE_PRICE_ROAST_POWER, metadata: { tier: 'power', plan_type: 'monthly' } },
+  },
+  power_annual: {
+    india: (userId: string) => ({
+      amount: 499000, currency: 'INR',
+      planId: process.env.RAZORPAY_PLAN_ROAST_POWER_ANNUAL,
+      notes: { userId, tier: 'power', plan_type: 'annual' },
+      receipt: `power_yr_${userId}_${Date.now()}`,
+    }),
+    global: { amount: 4990, currency: 'USD', priceId: process.env.STRIPE_PRICE_ROAST_POWER_ANNUAL, metadata: { tier: 'power', plan_type: 'annual' } },
   },
   lifetime: {
-    india: (userId: string) => ({ amount: 149900, currency: 'INR', notes: { userId, tier: 'lifetime' }, receipt: `lifetime_${userId}_${Date.now()}` }),
-    global: { amount: 1900, currency: 'USD', priceId: process.env.STRIPE_PRICE_ROAST_LIFETIME },
+    india: (userId: string) => ({
+      amount: 149900, currency: 'INR',
+      notes: { userId, tier: 'lifetime' },
+      receipt: `lifetime_${userId}_${Date.now()}`,
+    }),
+    global: { amount: 1900, currency: 'USD', priceId: process.env.STRIPE_PRICE_ROAST_LIFETIME, metadata: { tier: 'lifetime' } },
   },
 };
 
@@ -47,20 +94,44 @@ export async function POST(req: NextRequest) {
 
   if (market === 'india') {
     const rp = getRazorpay();
-    if (plan === 'lifetime') {
-      const opts = product.india(user.id) as any;
-      const order = await rp.orders.create({ amount: opts.amount, currency: opts.currency, receipt: opts.receipt, notes: opts.notes });
+    const opts = product.india(user.id);
+
+    // One-time payment (starter, lifetime, team) → order
+    if (plan === 'lifetime' || plan === 'starter') {
+      const order = await rp.orders.create({
+        amount: opts.amount,
+        currency: opts.currency,
+        receipt: opts.receipt,
+        notes: opts.notes,
+      });
       logger.apiResponse('POST', '/api/checkout', 200, Date.now() - startTime, { method: 'razorpay', plan, market });
-      return NextResponse.json({ method: 'razorpay', orderId: order.id, key: NEXT_PUBLIC_RAZORPAY_KEY_ID, amount: opts.amount, currency: opts.currency });
+      return NextResponse.json({
+        method: 'razorpay',
+        orderId: order.id,
+        key: NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: opts.amount,
+        currency: opts.currency,
+      });
     }
-    const opts = product.india(user.id) as { amount: number; currency: string; planId?: string; notes: Record<string, string>; receipt: string };
+
+    // Subscription (pro_monthly, pro_annual, power_monthly, power_annual)
     if (!opts.planId) {
       logger.apiError('POST', '/api/checkout', new Error('Razorpay plan not configured'), { plan });
-      return NextResponse.json({ error: 'Razorpay plan not configured. Set RAZORPAY_PLAN_ROAST_PRO' }, { status: 500 });
+      return NextResponse.json({ error: 'Razorpay plan not configured' }, { status: 500 });
     }
-    const subscription = await rp.subscriptions.create({ plan_id: opts.planId, customer_notify: 1, quantity: 1, total_count: 12, notes: opts.notes });
+    const subscription = await rp.subscriptions.create({
+      plan_id: opts.planId,
+      customer_notify: 1,
+      quantity: 1,
+      total_count: plan.includes('annual') ? 1 : 12,
+      notes: opts.notes,
+    });
     logger.apiResponse('POST', '/api/checkout', 200, Date.now() - startTime, { method: 'razorpay', plan, market, subscriptionId: subscription.id });
-    return NextResponse.json({ method: 'razorpay', subscriptionId: subscription.id, key: NEXT_PUBLIC_RAZORPAY_KEY_ID });
+    return NextResponse.json({
+      method: 'razorpay',
+      subscriptionId: subscription.id,
+      key: NEXT_PUBLIC_RAZORPAY_KEY_ID,
+    });
   }
 
   // Global — Stripe
@@ -70,11 +141,14 @@ export async function POST(req: NextRequest) {
     logger.apiError('POST', '/api/checkout', new Error('Stripe price not configured'), { plan });
     return NextResponse.json({ error: 'Stripe price not configured' }, { status: 500 });
   }
+
+  const isOneTime = plan === 'lifetime' || plan === 'starter';
   const session = await stripe.checkout.sessions.create({
-    mode: plan === 'lifetime' ? 'payment' : 'subscription',
+    mode: isOneTime ? 'payment' : 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: user.id,
     customer_email: user.email,
+    metadata: product.global.metadata,
     success_url: `${origin}/roast?checkout=success`,
     cancel_url: `${origin}/pricing?cancelled=true`,
   });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import type { RoastResult } from '@/types';
 import { createClient } from '@/lib/supabase/client';
@@ -13,27 +13,37 @@ export default function RoastPage() {
   const [showAuth, setShowAuth] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [remaining, setRemaining] = useState<number>(-1);
+  const [canDownload, setCanDownload] = useState(false);
+  const [downloadCredits, setDownloadCredits] = useState(0);
+  const [userTier, setUserTier] = useState<string>('free');
+  const [downloading, setDownloading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  const supabase = createClient();
+  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+    const sb = createClient();
+    setSupabase(sb);
+    sb.auth.getUser().then(({ data }) => setUser(data.user));
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
     });
     return () => subscription.unsubscribe();
+  }, []);
+
+  const getSupabase = useCallback(() => {
+    return supabase ?? createClient();
   }, [supabase]);
 
   const signIn = () => {
-    supabase.auth.signInWithOAuth({
+    getSupabase().auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${location.origin}/auth/callback` },
     });
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await getSupabase().auth.signOut();
     setUser(null);
   };
 
@@ -79,6 +89,10 @@ export default function RoastPage() {
 
     const data = await res.json();
     setResult(data.roast);
+    setRemaining(data.remaining ?? -1);
+    setCanDownload(data.can_download ?? false);
+    setDownloadCredits(data.download_credits ?? 0);
+    setUserTier(data.tier ?? 'free');
     setLoading(false);
   };
 
@@ -100,7 +114,7 @@ export default function RoastPage() {
       <div className="min-h-screen bg-zinc-900 text-white flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Free trial used</h2>
-          <p className="text-zinc-400 mb-6">Sign in for unlimited roasts. Free: 1 roast/day.</p>
+          <p className="text-zinc-400 mb-6">Sign in for unlimited roasts. Free: 5 roasts/month.</p>
           <button onClick={signIn} className="bg-red-600 hover:bg-red-700 px-8 py-3 rounded-xl font-bold transition-colors">Sign in with Google</button>
           <p className="mt-4 text-sm text-zinc-500">Or come back tomorrow for another free roast</p>
         </div>
@@ -109,7 +123,17 @@ export default function RoastPage() {
   }
 
   if (result) {
-    return <ResultView result={result} onReset={() => { setResult(null); setFile(null); }} user={user} signIn={signIn} signOut={signOut} />;
+    return <ResultView
+      result={result}
+      onReset={() => { setResult(null); setFile(null); }}
+      user={user}
+      signIn={signIn}
+      signOut={signOut}
+      canDownload={canDownload}
+      downloadCredits={downloadCredits}
+      userTier={userTier}
+      remaining={remaining}
+    />;
   }
 
   const severityColor = (s: string) => {
@@ -178,7 +202,7 @@ export default function RoastPage() {
           </div>
           <div>
             <p className="text-2xl font-bold text-white">Free</p>
-            <p>1 roast/day</p>
+            <p>5 roasts/day</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-white">AI</p>
@@ -190,8 +214,53 @@ export default function RoastPage() {
   );
 }
 
-function ResultView({ result, onReset, user, signIn, signOut }: { result: RoastResult; onReset: () => void; user: any; signIn: () => void; signOut: () => void; }) {
+function ResultView({ result, onReset, user, signIn, signOut, canDownload, downloadCredits, userTier, remaining }: {
+  result: RoastResult; onReset: () => void; user: any; signIn: () => void; signOut: () => void;
+  canDownload: boolean; downloadCredits: number; userTier: string; remaining: number;
+}) {
   const color = result.score >= 70 ? 'text-green-500' : result.score >= 40 ? 'text-yellow-500' : 'text-red-500';
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    setDownloadError('');
+    try {
+      const res = await fetch('/api/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roast: result, user_name: user?.email?.split('@')[0] }),
+      });
+
+      if (res.status === 402) {
+        const data = await res.json();
+        setDownloadError(data.error || 'No download credits');
+        setDownloading(false);
+        return;
+      }
+
+      if (!res.ok) {
+        setDownloadError('Download failed — try again');
+        setDownloading(false);
+        return;
+      }
+
+      // Download the HTML file
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'roastmycv-report.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setDownloading(false);
+    } catch {
+      setDownloadError('Download failed');
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-zinc-900 text-white">
@@ -270,7 +339,28 @@ function ResultView({ result, onReset, user, signIn, signOut }: { result: RoastR
           </div>
         </div>
 
-        <div className="text-center mt-16">
+        <div className="text-center mt-16 space-y-3">
+          {downloadError && <p className="text-red-400 text-sm">{downloadError}</p>}
+
+          {userTier === 'free' || userTier === 'starter' || userTier === 'anon' ? (
+            <div className="mb-4">
+              <Link href="/pricing" className="inline-block bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-8 py-3 rounded-xl font-semibold text-sm transition-colors">
+                {userTier === 'starter' ? `Download (${downloadCredits} credit${downloadCredits !== 1 ? 's' : ''} left) — Buy more` : 'Upgrade to Download PDF →'}
+              </Link>
+              {remaining >= 0 && (
+                <p className="text-xs text-zinc-500 mt-2">{remaining} roast{remaining !== 1 ? 's' : ''} remaining this month</p>
+              )}
+            </div>
+          ) : canDownload && (
+            <div className="mb-4">
+              <button onClick={handleDownload} disabled={downloading}
+                className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-700 disabled:text-zinc-400 text-white px-8 py-3 rounded-xl font-bold transition-colors">
+                {downloading ? 'Generating...' : '📄 Download Report'}
+              </button>
+              <p className="text-xs text-zinc-500 mt-2">HTML report — print to PDF</p>
+            </div>
+          )}
+
           <button onClick={onReset} className="bg-red-600 hover:bg-red-700 px-8 py-3 rounded-xl font-bold">
             Roast Another CV
           </button>
@@ -280,26 +370,4 @@ function ResultView({ result, onReset, user, signIn, signOut }: { result: RoastR
   );
 }
 
-if (process.env.NODE_ENV === 'development') {
-  const mockRoast: RoastResult = {
-    score: 42,
-    severity: 'brutal',
-    oneLiner: 'Your resume is a wall of text that recruiters will skim for 2 seconds before moving on.',
-    strengths: ['Has technical skills listed', 'Shows some project work', 'Includes education details'],
-    roastPoints: [
-      { category: 'formatting', issue: 'No bullet points — walls of paragraphs. ATS will choke.', severity: 3, suggestion: 'Rewrite experience as bullet points starting with strong action verbs.' },
-      { category: 'ats', issue: 'No metrics anywhere. "Worked on..." means nothing without numbers.', severity: 2, suggestion: 'Add metrics: "Reduced load time by 40%", "Managed 5-member team".' },
-      { category: 'skills', issue: '17 skills listed. Recruiters read the first 5.', severity: 2, suggestion: 'Trim to 8-10 relevant skills. Add proficiency levels.' },
-      { category: 'experience', issue: 'Weak action verbs like "Was responsible for", "Worked on".', severity: 3, suggestion: 'Replace with: Built, Implemented, Optimized, Led, Delivered.' },
-      { category: 'content', issue: 'No GitHub or portfolio links visible.', severity: 1, suggestion: 'Add GitHub, LinkedIn, and portfolio at top.' },
-    ],
-    actionPlan: [
-      { priority: 'critical', area: 'formatting', task: 'Convert to bullet points', details: 'ATS systems parse bullets. Paragraphs cause parsing errors.', resources: ['https://resumegenius.com/resume-builder'] },
-      { priority: 'high', area: 'content', task: 'Add metrics to every bullet', details: 'Every responsibility needs a number. Impact > responsibilities.' },
-      { priority: 'medium', area: 'skills', task: 'Trim skill list to 10 max', details: 'Prioritize in-demand skills. Remove MS Word, Excel basics.' },
-      { priority: 'medium', area: 'projects', task: 'Add GitHub links', details: 'Hiring managers check GitHub before interview. Ensure pinned repos look good.' },
-      { priority: 'low', area: 'layout', task: 'One page max', details: '2-page resumes get ignored in first screenings unless you have 10+ years experience.' },
-    ],
-  };
-  // ponytail: mockRoast only exists for dev testing
-}
+// ponytail: mockRoast was removed — dev-only fixture was unused

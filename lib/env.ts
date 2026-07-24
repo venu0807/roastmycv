@@ -26,9 +26,8 @@ if (!isBuildTime) {
   }
   for (const key of optional) {
     if (!process.env[key] || process.env[key]?.startsWith('placeholder')) {
-      if (typeof process.env.NEXT_PUBLIC_APP_URL !== 'undefined') {
-        console.warn(`Optional env var ${key} not set — related features will be unavailable`);
-      }
+      // eslint-disable-next-line no-console
+      console.warn(`Optional env var ${key} not set — related features will be unavailable`);
     }
   }
 }

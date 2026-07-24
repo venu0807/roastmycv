@@ -5,6 +5,12 @@ export async function parseResume(buffer: Buffer, mimeType: string): Promise<Res
 
   if (mimeType === 'application/pdf') {
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    // pdfjs-dist v6's Node.js "fake worker" does a dynamic import of the
+    // worker file using a relative path ("./pdf.worker.mjs") that breaks
+    // after Next.js/Turbopack bundles the module into .next/server/chunks/.
+    // Point it at a bare module specifier so Node.js resolves it from
+    // node_modules at runtime instead.
+    pdfjs.GlobalWorkerOptions.workerSrc = 'pdfjs-dist/legacy/build/pdf.worker.mjs';
     const data = await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
     let fullText = '';
     for (let i = 1; i <= data.numPages; i++) {

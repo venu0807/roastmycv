@@ -1,26 +1,122 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-primary: #DC2626;
+  --color-primary-dark: #B91C1C;
+  --color-secondary: #F97316;
+  --color-accent: #F59E0B;
+  --color-bg: #09090B;
+  --color-fg: #FAFAFA;
+
+  --background: #09090B;
+  --foreground: #FAFAFA;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-secondary: #F97316;
+  --color-accent: #F59E0B;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-display);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Premium utility classes */
+.glass-card {
+  background: rgba(24,24,27,0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(220,38,38,0.1);
+}
+
+.glass-card-light {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.gradient-btn {
+  background: linear-gradient(135deg, #DC2626 0%, #F97316 50%, #F59E0B 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 4s ease infinite;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.gradient-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(220,38,38,0.3);
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.fade-up {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes fadeUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up-1 { animation-delay: 0.1s; }
+.fade-up-2 { animation-delay: 0.2s; }
+.fade-up-3 { animation-delay: 0.3s; }
+.fade-up-4 { animation-delay: 0.4s; }
+
+.floating-badge {
+  background: linear-gradient(135deg, rgba(220,38,38,0.15), rgba(249,115,22,0.15));
+  border: 1px solid rgba(220,38,38,0.2);
+  backdrop-filter: blur(12px);
+  border-radius: 100px;
+  padding: 6px 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #FCA5A5;
+}
+
+.measure { max-width: 70ch; }
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+.bento-item {
+  border-radius: 16px;
+  padding: 24px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.bento-item:hover {
+  transform: translateY(-4px);
+}
+
+.divider-gradient {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(220,38,38,0.2) 50%, transparent 100%);
+}
+
+.hero-grid-bg {
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(220,38,38,0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(249,115,22,0.06) 0%, transparent 50%),
+    radial-gradient(circle at 50% 80%, rgba(245,158,11,0.06) 0%, transparent 50%);
+}
+
+@media (max-width: 768px) {
+  .bento-grid { gap: 12px; }
+  .bento-item { padding: 16px; }
 }

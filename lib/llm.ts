@@ -11,7 +11,7 @@ function getGroq() {
 }
 
 const RoastResultSchema = z.object({
-  score: z.number().min(0).max(100),
+  score: z.coerce.number().min(0).max(100),
   severity: z.enum(['brutal', 'medium', 'mild']),
   oneLiner: z.string().min(1).max(500),
   strengths: z.array(z.string().min(1).max(200)).length(3),
@@ -26,7 +26,7 @@ const RoastResultSchema = z.object({
     area: z.string().min(1).max(100),
     task: z.string().min(1).max(500),
     details: z.string().min(1).max(1000),
-    resources: z.array(z.string().url()).optional(),
+    resources: z.array(z.string().url()).max(3).optional(),
   })).min(3).max(10),
 });
 

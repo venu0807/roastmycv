@@ -46,8 +46,8 @@ async function checkGroq(): Promise<'ok' | 'error'> {
   }
 }
 
-async function checkSentry(): Promise<'ok' | 'error'> {
-  if (!env.sentryDsn || !env.sentryDsn.startsWith('https://')) return 'error'
+async function checkSentry(): Promise<'ok' | 'error' | 'unconfigured'> {
+  if (!env.sentryDsn || !env.sentryDsn.startsWith('https://')) return 'unconfigured'
   return 'ok'
 }
 
