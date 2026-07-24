@@ -202,7 +202,7 @@ export default function RoastPage() {
           </div>
           <div>
             <p className="text-2xl font-bold text-white">Free</p>
-            <p>5 roasts/day</p>
+            <p>5 roasts/month</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-white">AI</p>
