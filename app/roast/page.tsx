@@ -320,7 +320,7 @@ function ResultView({ result, onReset, user, signIn, signOut, canDownload, downl
             {result.actionPlan.map((a, i) => (
               <div key={i} className="bg-zinc-800 rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-xs px-2 py-1 rounded ${a.priority === 'critical' ? 'bg-red-900 text-red-300' : a.priority === 'high' ? 'bg-yellow-900 text-yellow-300' : 'bg-zinc-700 text-zinc-300'}`}>
+                  <span className={`text-xs px-2 py-1 rounded ${a.priority === 'critical' ? 'bg-red-900 text-red-300' : a.priority === 'high' ? 'bg-yellow-900 text-yellow-300' : 'bg-zinc-600 text-white'}`}>
                     {a.priority}
                   </span>
                   <span className="text-xs text-zinc-500">{a.area}</span>
