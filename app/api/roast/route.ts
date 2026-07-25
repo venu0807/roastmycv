@@ -112,7 +112,13 @@ export async function POST(req: NextRequest) {
     try {
       resumeData = await parseResume(buffer, file.type);
     } catch (e: any) {
-      logger.warn('Resume parse error', { error: e.message, fileName: file.name });
+      const errorDetail = e?.message || String(e);
+      const errorType = e?.constructor?.name || typeof e;
+      logger.warn('Resume parse error', { error: errorDetail, type: errorType, fileName: file.name });
+      // Provide more specific guidance based on error type
+      if (errorDetail?.includes('Invalid PDF') || errorDetail?.includes('corrupt')) {
+        return NextResponse.json({ error: 'This PDF appears to be corrupted or password-protected. Try a different file.' }, { status: 400 });
+      }
       return NextResponse.json({ error: 'Failed to parse resume. Try a simpler PDF/DOCX.' }, { status: 400 });
     }
 

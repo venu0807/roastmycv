@@ -10,23 +10,21 @@ declare global {
 
 type Market = 'india' | 'global';
 type BillingCycle = 'monthly' | 'yearly';
-type PlanKey = 'starter' | 'pro_monthly' | 'pro_annual' | 'power_monthly' | 'power_annual' | 'lifetime' | 'team_500' | 'team_1000';
+type PlanKey = 'starter' | 'pro_monthly' | 'pro_annual' | 'power_monthly' | 'power_annual' | 'team_500' | 'team_1000';
 
 const PRICES: Record<Market, Record<string, { label: string; monthly: string; yearly?: string }>> = {
   india: {
     free: { label: '₹0', monthly: '₹0' },
     starter: { label: '₹99', monthly: 'one-time' },
-    pro: { label: '₹299/mo', monthly: '₹299/mo', yearly: '₹2,490/yr' },
-    power: { label: '₹499/mo', monthly: '₹499/mo', yearly: '₹4,990/yr' },
-    lifetime: { label: '₹1,499', monthly: 'one-time' },
+    pro: { label: '₹199/mo', monthly: '₹199/mo', yearly: '₹1,990/yr' },
+    power: { label: '₹399/mo', monthly: '₹399/mo', yearly: '₹3,990/yr' },
     team: { label: '₹500', monthly: 'min top-up' },
   },
   global: {
     free: { label: '$0', monthly: '$0' },
     starter: { label: '$1.99', monthly: 'one-time' },
-    pro: { label: '$4.99/mo', monthly: '$4.99/mo', yearly: '$24.90/yr' },
-    power: { label: '$9.99/mo', monthly: '$9.99/mo', yearly: '$49.90/yr' },
-    lifetime: { label: '$19', monthly: 'one-time' },
+    pro: { label: '$3.99/mo', monthly: '$3.99/mo', yearly: '$19.90/yr' },
+    power: { label: '$7.99/mo', monthly: '$7.99/mo', yearly: '$39.90/yr' },
     team: { label: '$5', monthly: 'min top-up' },
   },
 };
@@ -105,7 +103,6 @@ export default function PricingPage() {
         currency: data.currency || 'INR',
         name: 'RoastMyCV',
         description: plan === 'starter' ? 'Starter — 1 Download Credit'
-          : plan === 'lifetime' ? 'Lifetime Access'
           : plan.includes('pro') ? 'Pro Subscription'
           : plan.includes('power') ? 'Power Subscription'
           : 'RoastMyCV',
@@ -328,29 +325,6 @@ export default function PricingPage() {
             )}
           </div>
         </div>
-
-        {/* Lifetime — standalone row */}
-        <div className="max-w-5xl mx-auto mb-6">
-          <div className="bg-zinc-900 rounded-3xl border border-zinc-700/50 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <h3 className="font-bold text-white text-lg">Lifetime Access</h3>
-              <p className="text-sm text-zinc-400">One-time purchase. Forever access. All Pro features, no recurring bills.</p>
-            </div>
-            <div className="flex items-center gap-4 shrink-0">
-              <span className="text-3xl font-bold text-white">{price.lifetime.label}</span>
-              {isCurrentTier('lifetime') ? (
-                <span className="bg-zinc-800 text-zinc-400 px-6 py-2.5 rounded-xl text-sm font-medium">Purchased</span>
-              ) : (
-                <button onClick={() => handleCheckout('lifetime')} disabled={loading === 'lifetime'}
-                  className="bg-red-600 hover:bg-red-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all">
-                  {loading === 'lifetime' ? 'Processing...' : `Buy ${market === 'india' ? '₹1,499' : '$19'}`}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Team */}
         <div className="max-w-5xl mx-auto">
           <div className="bg-zinc-900 rounded-3xl border border-amber-700/30 p-6" style={{ background: 'rgba(245,158,11,0.04)' }}>
             <div className="flex flex-col sm:flex-row items-start justify-between gap-6">

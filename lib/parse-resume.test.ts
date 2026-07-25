@@ -18,6 +18,11 @@ vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
 }))
 
 vi.mock('mammoth', () => ({
+  default: {
+    extractRawText: vi.fn(({ buffer }) => Promise.resolve({
+      value: new TextDecoder().decode(buffer),
+    })),
+  },
   extractRawText: vi.fn(({ buffer }) => Promise.resolve({
     value: new TextDecoder().decode(buffer),
   })),

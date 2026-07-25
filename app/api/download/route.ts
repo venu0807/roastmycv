@@ -111,12 +111,14 @@ export async function POST(req: NextRequest) {
 }
 
 function generateResumeHTML(resumeText: string, jobTitle: string): string {
+  // Split into sections (## Section Name or SECTION NAME or uppercase headers)
   const lines = resumeText.split('\n');
   const sections: { heading?: string; content: string[] }[] = [];
   let current: { heading?: string; content: string[] } = { content: [] };
 
   for (const line of lines) {
     const trimmed = line.trim();
+    // Detect headers: ## Markdown, ALL CAPS standalone lines, or lines ending with :
     if (
       trimmed.startsWith('## ') ||
       trimmed.startsWith('# ') ||
@@ -144,9 +146,11 @@ function generateResumeHTML(resumeText: string, jobTitle: string): string {
       .map(l => {
         const t = l.trim();
         if (!t) return '';
+        // Bullet points
         if (t.startsWith('- ') || t.startsWith('• ') || t.startsWith('* ')) {
           return `<li style="margin-bottom:4px;color:#d4d4d8;font-size:13px;line-height:1.5;">${escapeHtml(t.replace(/^[-•*]\s*/, ''))}</li>`;
         }
+        // Numbered items
         if (/^\d+[\.\)]\s/.test(t)) {
           return `<li style="margin-bottom:4px;color:#d4d4d8;font-size:13px;line-height:1.5;">${escapeHtml(t.replace(/^\d+[\.\)]\s*/, ''))}</li>`;
         }

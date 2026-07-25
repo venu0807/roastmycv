@@ -190,7 +190,7 @@ export default function RoastPage() {
         <button
           onClick={handleUpload}
           disabled={!file || loading}
-          className="bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 disabled:text-zinc-500 text-white px-10 py-4 rounded-xl text-lg font-bold transition-colors"
+          className="bg-red-600 hover:bg-red-700 disabled:bg-zinc-600 disabled:text-zinc-300 text-white px-10 py-4 rounded-xl text-lg font-bold transition-colors"
         >
           {loading ? 'Processing...' : 'Roast My CV 🔥'}
         </button>

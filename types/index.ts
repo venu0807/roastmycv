@@ -18,7 +18,7 @@ export interface RoastResult {
 export interface RoastPoint {
   category: string;
   issue: string;
-  severity: 1 | 2 | 3;
+  severity: number;
   suggestion: string;
 }
 
@@ -28,4 +28,66 @@ export interface ActionItem {
   task: string;
   details: string;
   resources?: string[];
+}
+
+// ── New types for HireRaft-style features ─────────────────────────────────
+
+export interface KeywordGap {
+  keyword: string;
+  found: boolean;
+  importance: 'critical' | 'important' | 'nice-to-have';
+  suggestedContext?: string;
+}
+
+export interface ImprovedBullet {
+  original: string;
+  rewritten: string;
+  reason: string;
+}
+
+export interface OptimizeResult {
+  atsScoreBefore: number;
+  atsScoreAfter: number;
+  keywordGaps: KeywordGap[];
+  optimizedResumeText: string;
+  originalResumeText: string;
+  improvedBullets: ImprovedBullet[];
+  changes: string[];
+}
+
+export interface CoverLetterResult {
+  subject: string;
+  body: string;
+  tone: string;
+  length: number;
+}
+
+export interface SkillRoadmapItem {
+  week: number;
+  topic: string;
+  resources: { title: string; url: string; type: string }[];
+  project: string;
+  skillsCovered: string[];
+}
+
+export interface SkillRoadmapResult {
+  skill: string;
+  targetRole: string;
+  currentLevel: string;
+  estimatedTime: string;
+  roadmap: SkillRoadmapItem[];
+}
+
+export interface OptimizationHistoryItem {
+  id: string;
+  type: 'optimize' | 'roast';
+  originalScore: number | null;
+  optimizedScore: number | null;
+  score: number | null;
+  keywordGapCount: number | null;
+  jobTitle: string | null;
+  company: string | null;
+  createdAt: string;
+  shareToken: string;
+  previewSnippet: string;
 }

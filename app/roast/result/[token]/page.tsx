@@ -41,13 +41,13 @@ async function getRoast(shareToken: string): Promise<RoastData | null> {
 
   const { data, error } = await supabase
     .from('roasts')
-    .select('result_json, share_token, is_watermarked')
+    .select('roast_json, share_token, is_watermarked')
     .eq('share_token', shareToken)
     .single();
 
   if (error || !data) return null;
 
-  const result = data.result_json as RoastData;
+  const result = data.roast_json as RoastData;
   return {
     ...result,
     share_token: data.share_token,
