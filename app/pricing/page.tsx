@@ -284,8 +284,8 @@ export default function PricingPage() {
                 {loading === 'pro_monthly' || loading === 'pro_annual'
                   ? 'Processing...'
                   : billing === 'yearly'
-                    ? `Subscribe ${market === 'india' ? '₹2,490/yr' : '$24.90/yr'}`
-                    : `Subscribe ${market === 'india' ? '₹299/mo' : '$4.99/mo'}`
+                    ? `Subscribe ${price.pro.yearly}`
+                    : `Subscribe ${price.pro.monthly}`
                 }
               </button>
             )}
@@ -318,8 +318,8 @@ export default function PricingPage() {
                 {loading === 'power_monthly' || loading === 'power_annual'
                   ? 'Processing...'
                   : billing === 'yearly'
-                    ? `Subscribe ${market === 'india' ? '₹4,990/yr' : '$49.90/yr'}`
-                    : `Subscribe ${market === 'india' ? '₹499/mo' : '$9.99/mo'}`
+                    ? `Subscribe ${price.power.yearly}`
+                    : `Subscribe ${price.power.monthly}`
                 }
               </button>
             )}
