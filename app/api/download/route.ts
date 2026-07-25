@@ -177,10 +177,9 @@ function generateResumeHTML(resumeText: string, jobTitle: string): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Optimized Resume — ${escapeHtml(jobTitle)}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; color: #fafafa; padding: 40px 20px; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #09090b; color: #fafafa; padding: 40px 20px; }
     .container { max-width: 800px; margin: 0 auto; }
     .header { text-align: center; margin-bottom: 32px; }
     .logo { font-size: 20px; font-weight: 800; color: #ef4444; margin-bottom: 4px; }
@@ -221,7 +220,7 @@ function generateReportHTML(roast: RoastResult, userName?: string): string {
   ).join('');
 
   const roastPointsList = roast.roastPoints.map(p =>
-    `<div style="background:#18181b;border-radius:10px;padding:16px;margin-bottom:12px;border-left:4px solid #ef4444;">
+    `<div style="background:#18181b;border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid rgba(239,68,68,0.25);">
       <div style="display:flex;gap:8px;margin-bottom:6px;">
         <span style="font-size:11px;background:#27272a;padding:3px 8px;border-radius:4px;color:#a1a1aa;">${escapeHtml(p.category)}</span>
         <span style="font-size:11px;">${'🔥'.repeat(p.severity)}</span>
@@ -248,10 +247,9 @@ function generateReportHTML(roast: RoastResult, userName?: string): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RoastMyCV Report${userName ? ` — ${escapeHtml(userName)}` : ''}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Inter', system-ui, sans-serif; background: #09090b; color: #fafafa; padding: 40px 20px; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #09090b; color: #fafafa; padding: 40px 20px; }
     .container { max-width: 800px; margin: 0 auto; }
     .header { text-align: center; margin-bottom: 40px; }
     .logo { font-size: 28px; font-weight: 800; color: #ef4444; margin-bottom: 4px; }
