@@ -79,23 +79,21 @@ export async function POST(req: NextRequest) {
     let formData: FormData;
     try {
       formData = await req.formData();
-    } catch {
-      return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
+    } catch (e) {
+      return NextResponse.json({ error: 'Invalid form data', _debug: 'formdata_parse_failed' }, { status: 400 });
     }
 
     const file = formData.get('resume') as File;
     const jobDescription = formData.get('jobDescription') as string;
 
-    if (!file) {
-      return NextResponse.json({ error: 'Missing resume file' }, { status: 400 });
-    }
+    if (!file) return NextResponse.json({ error: 'Missing resume file', _debug: 'no_file' }, { status: 400 });
     if (!jobDescription || jobDescription.trim().length < 20) {
-      return NextResponse.json({ error: 'Job description too short (min 20 chars)' }, { status: 400 });
+      return NextResponse.json({ error: 'Job description too short (min 20 chars)', _debug: 'jd_too_short' }, { status: 400 });
     }
 
     const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (!validTypes.includes(file.type) || file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Invalid file (max 5MB, PDF or DOCX)' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid file (max 5MB, PDF or DOCX)', _debug: 'invalid_file_type_or_size' }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -106,7 +104,11 @@ export async function POST(req: NextRequest) {
       resumeData = await parseResume(buffer, file.type);
     } catch (e: any) {
       logger.warn('Resume parse error', { error: e.message, fileName: file.name });
-      return NextResponse.json({ error: 'Failed to parse resume. Try a simpler PDF/DOCX.' }, { status: 400 });
+      return NextResponse.json({ error: 'Failed to parse resume. Try a simpler PDF/DOCX.', _debug: 'parse_failed:' + e.message }, { status: 400 });
+    }
+
+    if (!resumeData?.text || resumeData.text.trim().length < 10) {
+      return NextResponse.json({ error: 'Resume text too short after parsing', _debug: 'parsed_text_empty' }, { status: 400 });
     }
 
     resumeData.text = resumeData.text.slice(0, 6000);
@@ -127,14 +129,14 @@ export async function POST(req: NextRequest) {
         await setCache(cacheK, optimizeResult);
       } catch (e: any) {
         logger.error('LLM optimization failed', { error: e.message, stack: e.stack });
-        return NextResponse.json({ error: 'AI optimization failed. Please try again in a moment.' }, { status: 503 });
+        return NextResponse.json({ error: 'AI optimization failed. Please try again in a moment.', _debug: 'llm_failed:' + e.message }, { status: 503 });
       }
     }
 
     // Guard: optimizeResult must be defined at this point
     if (!optimizeResult) {
       logger.error('optimizeResult is null after LLM call', { resumeLength: resumeData.text.length, jdLength: jdTrimmed.length });
-      return NextResponse.json({ error: 'Optimization produced no result. Try again.' }, { status: 500 });
+      return NextResponse.json({ error: 'Optimization produced no result. Try again.', _debug: 'optimizeResult_null' }, { status: 500 });
     }
 
     // ── Save to DB ──────────────────────────────────────────────────────
@@ -191,10 +193,9 @@ export async function POST(req: NextRequest) {
     const durationMs = Date.now() - startTime;
     const errMsg = e?.message || String(e || 'Unknown error');
     logger.apiError('POST', '/api/optimize', e);
-    // TEMP DEBUG: return actual error for diagnosis
     return NextResponse.json({
       error: 'Optimization failed. Please try again.',
-      _debug: errMsg.slice(0, 200),
+      _debug: 'unhandled_catch:' + errMsg.slice(0, 200),
     }, { status: 500 });
   }
 }
