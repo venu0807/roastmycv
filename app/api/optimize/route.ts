@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { analyzeResume, rewriteResume } from '@/lib/llm';
+import { optimizeResume } from '@/lib/llm';
 import { parseResume } from '@/lib/parse-resume';
 import { getCached, setCache, cacheKey } from '@/lib/cache';
 import { checkRateLimit, getRateLimitKey } from '@/lib/cache';
@@ -115,22 +115,20 @@ export async function POST(req: NextRequest) {
     // ── Cache check — skip redundant LLM calls ──────────────────────────
     const cacheK = `optimize:${cacheKey(resumeData.text)}:${cacheKey(jdTrimmed)}`;
     const cached = await getCached(cacheK);
-    let analysis: any, rewrite: any;
+    let optimizeResult: any;
 
     if (cached) {
       logger.info('Cache hit for optimize', { key: cacheK });
-      analysis = cached.analysis;
-      rewrite = cached.rewrite;
+      optimizeResult = cached;
     } else {
-      // Step 1: Analyze resume vs JD
-      logger.info('Step 1: Analyzing resume against job description');
-      analysis = await analyzeResume(resumeData, jdTrimmed);
-
-      // Step 2: Rewrite resume with keywords injected
-      logger.info('Step 2: Rewriting resume');
-      rewrite = await rewriteResume(resumeData, jdTrimmed, analysis);
-
-      await setCache(cacheK, { analysis, rewrite });
+      logger.info('Running single-pass ATS optimization');
+      try {
+        optimizeResult = await optimizeResume(resumeData, jdTrimmed);
+        await setCache(cacheK, optimizeResult);
+      } catch (e: any) {
+        logger.error('LLM optimization failed', { error: e.message });
+        return NextResponse.json({ error: 'AI optimization failed. Please try again in a moment.' }, { status: 503 });
+      }
     }
 
     // ── Save to DB ──────────────────────────────────────────────────────
@@ -145,35 +143,39 @@ export async function POST(req: NextRequest) {
       logger.error('Storage upload failed', { userId: user.id, error: uploadError.message });
     }
 
-    const adminClient = createClient(env.supabaseUrl, env.supabaseServiceRoleKey);
-    await adminClient.from('optimizations').insert({
-      user_id: user.id,
-      file_url: fileName,
-      job_description: jdTrimmed,
-      original_resume_json: resumeData,
-      optimized_resume_json: { text: rewrite.optimizedResumeText },
-      keyword_gaps: analysis.keywordGaps,
-      scores_before: analysis.atsScoreBefore,
-      scores_after: rewrite.atsScoreAfter,
-      changes_summary: analysis.changes,
-      job_title: guessJobTitle(jdTrimmed),
-    }).select().single();
+    try {
+      const adminClient = createClient(env.supabaseUrl, env.supabaseServiceRoleKey);
+      await adminClient.from('optimizations').insert({
+        user_id: user.id,
+        file_url: fileName,
+        job_description: jdTrimmed,
+        original_resume_json: resumeData,
+        optimized_resume_json: { text: optimizeResult.optimizedResumeText },
+        keyword_gaps: optimizeResult.keywordGaps,
+        scores_before: optimizeResult.atsScoreBefore,
+        scores_after: optimizeResult.atsScoreAfter,
+        changes_summary: optimizeResult.changes,
+        job_title: guessJobTitle(jdTrimmed),
+      }).select().single();
 
-    // Increment usage counter
-    await supabase.rpc('increment_optimization_count', { inc_user_id: user.id });
+      await supabase.rpc('increment_optimization_count', { inc_user_id: user.id });
+    } catch (dbError: any) {
+      logger.error('Optimization DB insert failed', { userId: user.id, error: dbError.message });
+      // Still return result even if DB save fails
+    }
 
     const durationMs = Date.now() - startTime;
     logger.apiResponse('POST', '/api/optimize', 200, durationMs, { userId: user.id, tier });
 
     return NextResponse.json({
       optimizationId: '',
-      originalScore: analysis.atsScoreBefore,
-      optimizedScore: rewrite.atsScoreAfter,
-      scoreImprovement: rewrite.atsScoreAfter - analysis.atsScoreBefore,
-      keywordGaps: analysis.keywordGaps,
-      optimizedResume: { text: rewrite.optimizedResumeText },
-      changes: analysis.changes,
-      improvedBullets: analysis.improvedBullets,
+      originalScore: optimizeResult.atsScoreBefore,
+      optimizedScore: optimizeResult.atsScoreAfter,
+      scoreImprovement: optimizeResult.atsScoreAfter - optimizeResult.atsScoreBefore,
+      keywordGaps: optimizeResult.keywordGaps,
+      optimizedResume: { text: optimizeResult.optimizedResumeText },
+      changes: optimizeResult.changes,
+      improvedBullets: optimizeResult.improvedBullets,
       remaining,
       tier,
       canDownload,

@@ -277,6 +277,84 @@ Roast this. Be brutally honest. Respond in JSON format.`;
 
 // ── ATS Optimize Functions ──────────────────────────────────────────────
 
+const SYSTEM_PROMPT_OPTIMIZE_COMBINED = `You are an ATS optimization expert and resume writer. Given a resume and a job description:
+
+STEP 1: Analyze the resume against the job description:
+- Score the resume 0-100 on ATS compatibility
+- Identify ALL important keywords from JD and check which appear in the resume
+- Find weak bullet points and rewrite them with strong action verbs + metrics
+- List specific changes needed
+
+STEP 2: Rewrite the ENTIRE resume to be ATS-optimized:
+- Naturally inject ALL missing critical/important keywords
+- Use strong action verbs (Built, Implemented, Optimized, Led, Delivered, Architected)
+- Add specific metrics where possible
+- Keep it honest — don't fabricate experience
+- Proper ATS formatting with section headers
+
+Return JSON exactly like this:
+{
+  "atsScoreBefore": <0-100>,
+  "keywordGaps": [
+    { "keyword": "<keyword>", "found": true/false, "importance": "critical|important|nice-to-have", "suggestedContext": "<where to add>" }
+  ],
+  "improvedBullets": [
+    { "original": "<weak bullet>", "rewritten": "<strong bullet with metrics>", "reason": "<why better>" }
+  ],
+  "changes": ["<change1>", "<change2>"],
+  "atsScoreAfter": <0-100>,
+  "optimizedResumeText": "<the complete rewritten resume as plain text with section headers>"
+}
+
+Structure the optimized resume sections: Professional Summary, Skills, Work Experience (with bullet points), Education, Certifications (if applicable), Projects (if applicable).
+Be specific. For missing keywords, suggest where to add them. Indian resumes often have irrelevant skills, weak verbs, missing metrics. Call these out.`;
+
+export async function optimizeResume(
+  resume: ResumeData,
+  jobDescription: string
+): Promise<{
+  atsScoreBefore: number;
+  atsScoreAfter: number;
+  keywordGaps: any[];
+  improvedBullets: any[];
+  changes: string[];
+  optimizedResumeText: string;
+}> {
+  const userPrompt = `Resume text:
+---
+${resume.text.slice(0, 5000)}
+---
+
+Job Description:
+---
+${jobDescription.slice(0, 3000)}
+---
+
+Sections found: ${Object.keys(resume.sections).join(', ')}
+
+Analyze AND rewrite this resume for ATS optimization. Respond in JSON.`;
+
+  const text = await callGroq(SYSTEM_PROMPT_OPTIMIZE_COMBINED, userPrompt, 4000);
+  const parsed = JSON.parse(text);
+
+  // Validate and reshape the combined response
+  const keywordGaps = Array.isArray(parsed.keywordGaps) ? parsed.keywordGaps.slice(0, 30) : [];
+  const improvedBullets = Array.isArray(parsed.improvedBullets) ? parsed.improvedBullets.slice(0, 15) : [];
+  const changes = Array.isArray(parsed.changes) ? parsed.changes.slice(0, 15) : [];
+  const atsScoreBefore = typeof parsed.atsScoreBefore === 'number' ? Math.min(100, Math.max(0, parsed.atsScoreBefore)) : 50;
+  const atsScoreAfter = typeof parsed.atsScoreAfter === 'number' ? Math.min(100, Math.max(0, parsed.atsScoreAfter)) : 70;
+  const optimizedResumeText = String(parsed.optimizedResumeText || parsed.optimizedResume || '');
+
+  return {
+    atsScoreBefore,
+    atsScoreAfter,
+    keywordGaps,
+    improvedBullets,
+    changes,
+    optimizedResumeText,
+  };
+}
+
 export async function analyzeResume(resume: ResumeData, jobDescription: string) {
   const userPrompt = `Resume text:
 ---
