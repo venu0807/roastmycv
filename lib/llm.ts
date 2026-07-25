@@ -325,27 +325,27 @@ export async function optimizeResume(
   changes: string[];
   optimizedResumeText: string;
 }> {
-  const userPrompt = `Resume text:
+  const userPrompt = `Resume:
 ---
-${resume.text.slice(0, 4000)}
----
-
-Job Description:
----
-${jobDescription.slice(0, 2000)}
+${resume.text.slice(0, 3000)}
 ---
 
-Sections found: ${Object.keys(resume.sections).join(', ')}
+JD:
+---
+${jobDescription.slice(0, 1500)}
+---
 
-Analyze AND rewrite this resume for ATS optimization. Respond in JSON.`;
+Sections: ${Object.keys(resume.sections).join(', ')}
 
-  const text = await callGroq(SYSTEM_PROMPT_OPTIMIZE_COMBINED, userPrompt, 3000);
+ATS optimize + rewrite. JSON only.`;
+
+  const text = await callGroq(SYSTEM_PROMPT_OPTIMIZE_COMBINED, userPrompt, 2500);
   const parsed = JSON.parse(text);
 
   // Validate and reshape the combined response
-  const keywordGaps = Array.isArray(parsed.keywordGaps) ? parsed.keywordGaps.slice(0, 30) : [];
-  const improvedBullets = Array.isArray(parsed.improvedBullets) ? parsed.improvedBullets.slice(0, 15) : [];
-  const changes = Array.isArray(parsed.changes) ? parsed.changes.slice(0, 15) : [];
+  const keywordGaps = Array.isArray(parsed.keywordGaps) ? parsed.keywordGaps.slice(0, 20) : [];
+  const improvedBullets = Array.isArray(parsed.improvedBullets) ? parsed.improvedBullets.slice(0, 10) : [];
+  const changes = Array.isArray(parsed.changes) ? parsed.changes.slice(0, 10) : [];
   const atsScoreBefore = typeof parsed.atsScoreBefore === 'number' ? Math.min(100, Math.max(0, parsed.atsScoreBefore)) : 50;
   const atsScoreAfter = typeof parsed.atsScoreAfter === 'number' ? Math.min(100, Math.max(0, parsed.atsScoreAfter)) : 70;
   const optimizedResumeText = String(parsed.optimizedResumeText || parsed.optimizedResume || '');
