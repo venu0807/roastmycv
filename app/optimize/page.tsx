@@ -98,7 +98,9 @@ export default function OptimizePage() {
 
     if (!res.ok) {
       const data = await res.json();
-      setError(data.error || 'Optimization failed');
+      // Show debug info for diagnosis
+      const debugInfo = data._debug ? ` [${data._debug}]` : '';
+      setError((data.error || 'Optimization failed') + debugInfo);
       setLoading(false);
       return;
     }
