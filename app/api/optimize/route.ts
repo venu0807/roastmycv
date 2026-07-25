@@ -126,9 +126,15 @@ export async function POST(req: NextRequest) {
         optimizeResult = await optimizeResume(resumeData, jdTrimmed);
         await setCache(cacheK, optimizeResult);
       } catch (e: any) {
-        logger.error('LLM optimization failed', { error: e.message });
+        logger.error('LLM optimization failed', { error: e.message, stack: e.stack });
         return NextResponse.json({ error: 'AI optimization failed. Please try again in a moment.' }, { status: 503 });
       }
+    }
+
+    // Guard: optimizeResult must be defined at this point
+    if (!optimizeResult) {
+      logger.error('optimizeResult is null after LLM call', { resumeLength: resumeData.text.length, jdLength: jdTrimmed.length });
+      return NextResponse.json({ error: 'Optimization produced no result. Try again.' }, { status: 500 });
     }
 
     // ── Save to DB ──────────────────────────────────────────────────────
@@ -183,8 +189,13 @@ export async function POST(req: NextRequest) {
 
   } catch (e: any) {
     const durationMs = Date.now() - startTime;
+    const errMsg = e?.message || String(e || 'Unknown error');
     logger.apiError('POST', '/api/optimize', e);
-    return NextResponse.json({ error: 'Optimization failed. Please try again.' }, { status: 500 });
+    // TEMP DEBUG: return actual error for diagnosis
+    return NextResponse.json({
+      error: 'Optimization failed. Please try again.',
+      _debug: errMsg.slice(0, 200),
+    }, { status: 500 });
   }
 }
 
