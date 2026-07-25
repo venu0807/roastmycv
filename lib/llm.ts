@@ -14,7 +14,7 @@ const MODEL = 'llama-3.3-70b-versatile';
 
 async function callGroq(systemPrompt: string, userPrompt: string, maxTokens = 2000): Promise<string> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
+  const timeout = setTimeout(() => controller.abort(), 8000); // 8s max to fit Vercel 10s limit
   try {
     const completion = await getGroq().chat.completions.create({
       model: MODEL,
@@ -26,7 +26,12 @@ async function callGroq(systemPrompt: string, userPrompt: string, maxTokens = 20
       temperature: 0.7,
       max_tokens: maxTokens,
     }, { signal: controller.signal });
-    return completion.choices[0]?.message?.content || '{}';
+    const content = completion.choices[0]?.message?.content || '{}';
+    console.log('[LLM] Raw response:', content.slice(0, 500));
+    return content;
+  } catch (e: any) {
+    console.error('[LLM] Error:', e.message, e.stack);
+    throw e;
   } finally {
     clearTimeout(timeout);
   }
@@ -322,19 +327,19 @@ export async function optimizeResume(
 }> {
   const userPrompt = `Resume text:
 ---
-${resume.text.slice(0, 5000)}
+${resume.text.slice(0, 4000)}
 ---
 
 Job Description:
 ---
-${jobDescription.slice(0, 3000)}
+${jobDescription.slice(0, 2000)}
 ---
 
 Sections found: ${Object.keys(resume.sections).join(', ')}
 
 Analyze AND rewrite this resume for ATS optimization. Respond in JSON.`;
 
-  const text = await callGroq(SYSTEM_PROMPT_OPTIMIZE_COMBINED, userPrompt, 4000);
+  const text = await callGroq(SYSTEM_PROMPT_OPTIMIZE_COMBINED, userPrompt, 3000);
   const parsed = JSON.parse(text);
 
   // Validate and reshape the combined response
