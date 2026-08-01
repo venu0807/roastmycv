@@ -14,6 +14,7 @@ export default function ResumeEditor({ initialText, onSave, readOnly = false }: 
   const [hasHistory, setHasHistory] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync controlled prop, intentional
     setText(initialText);
     setSaved(true);
   }, [initialText]);

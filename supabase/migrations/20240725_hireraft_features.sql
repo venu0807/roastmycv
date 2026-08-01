@@ -54,7 +54,7 @@ ALTER TABLE public.optimizations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own optimizations" ON public.optimizations
     FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Anyone can view optimization by token" ON public.optimizations
-    FOR SELECT USING (true);
+    FOR SELECT USING (share_token IS NOT NULL);
 CREATE POLICY "Service role can insert optimizations" ON public.optimizations
     FOR INSERT WITH CHECK (true);
 CREATE POLICY "Service role can update optimizations" ON public.optimizations

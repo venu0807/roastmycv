@@ -29,6 +29,7 @@ export default function TeamPage() {
 
   useEffect(() => {
     const s = createClient();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- cache client, intentional
     setSupabase(s);
     s.auth.getUser().then(({ data }) => setUser(data.user));
 

@@ -49,6 +49,7 @@ export default function OptimizePage() {
   useEffect(() => {
     if (jobDescription) {
       const firstLine = jobDescription.split('\n')[0].trim();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- seed editable field from JD, intentional
       setTargetRoleInput(firstLine.slice(0, 80));
     }
   }, [jobDescription]);
@@ -487,6 +488,7 @@ function ResultView({
             initialText={result.optimizedResume?.text || ''}
             readOnly={!isPro}
             onSave={(text) => {
+              // eslint-disable-next-line react-hooks/immutability -- result is component-owned local state
               result.optimizedResume.text = text;
             }}
           />

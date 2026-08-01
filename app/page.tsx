@@ -198,7 +198,7 @@ export default function Home() {
               <div className="glass-card-light p-8 rounded-2xl">
                 <div className="flex gap-1 mb-4"><span className="text-red-400">★</span><span className="text-red-400">★</span><span className="text-red-400">★</span><span className="text-red-400">★</span><span className="text-red-400">★</span></div>
                 <p className="text-zinc-300 text-sm leading-relaxed mb-6">
-                  "Stung when AI called my resume 'a list of tasks, not achievements.' Rewrote everything. Got 3 interview calls in 2 weeks."
+                  &quot;Stung when AI called my resume &apos;a list of tasks, not achievements.&apos; Rewrote everything. Got 3 interview calls in 2 weeks.&quot;
                 </p>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-red-900/50 flex items-center justify-center text-sm font-semibold text-red-400">AP</div>
@@ -212,7 +212,7 @@ export default function Home() {
               <div className="glass-card-light p-8 rounded-2xl">
                 <div className="flex gap-1 mb-4"><span className="text-red-400">★</span><span className="text-red-400">★</span><span className="text-red-400">★</span><span className="text-red-400">★</span><span className="text-red-400">★</span></div>
                 <p className="text-zinc-300 text-sm leading-relaxed mb-6">
-                  "Pro feature showed my resume had 34% ATS match. Fixed keywords based on suggestions. Next application got shortlisted."
+                  &quot;Pro feature showed my resume had 34% ATS match. Fixed keywords based on suggestions. Next application got shortlisted.&quot;
                 </p>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-orange-900/50 flex items-center justify-center text-sm font-semibold text-orange-400">RK</div>
@@ -226,7 +226,7 @@ export default function Home() {
               <div className="glass-card-light p-8 rounded-2xl">
                 <div className="flex gap-1 mb-4"><span className="text-red-400">★</span><span className="text-red-400">★</span><span className="text-red-400">★</span><span className="text-red-400">★</span><span className="text-zinc-600">★</span></div>
                 <p className="text-zinc-300 text-sm leading-relaxed mb-6">
-                  "Had 5 versions of my CV. RoastMyCV told me which one was best and why. Finally deleted the other 4. Peace of mind."
+                  &quot;Had 5 versions of my CV. RoastMyCV told me which one was best and why. Finally deleted the other 4. Peace of mind.&quot;
                 </p>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-amber-900/50 flex items-center justify-center text-sm font-semibold text-amber-400">SM</div>

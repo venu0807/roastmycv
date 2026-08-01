@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     // Detect tier from receipt prefix
     if (receipt.startsWith('lifetime') || receipt.startsWith('life')) {
-      await supabase.rpc('update_user_tier', { user_id: userId, new_tier: 'lifetime' });
+      await supabase.rpc('update_user_tier', { user_id: userId, new_tier: 'power' });
     }
     else if (receipt.startsWith('starter') || receipt.startsWith('start')) {
       // Grant 1 download credit, keep tier as free (starter is one-time download)
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       // Fallback: check notes.tier
       const tier = payment.notes?.tier || 'pro';
       if (tier === 'lifetime') {
-        await supabase.rpc('update_user_tier', { user_id: userId, new_tier: 'lifetime' });
+        await supabase.rpc('update_user_tier', { user_id: userId, new_tier: 'power' });
       }
     }
   }

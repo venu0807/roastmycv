@@ -11,15 +11,7 @@ export default function HistoryPage() {
   const [tier, setTier] = useState('free');
   const supabase = createClient();
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
-      if (data.user) loadHistory();
-      else setLoading(false);
-    });
-  }, []);
-
-  const loadHistory = async () => {
+  async function loadHistory() {
     setLoading(true);
     const res = await fetch('/api/history');
     if (res.ok) {
@@ -28,7 +20,15 @@ export default function HistoryPage() {
       setTier(data.tier);
     }
     setLoading(false);
-  };
+  }
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      if (data.user) loadHistory();
+      else setLoading(false);
+    });
+  }, []);
 
   if (!user) {
     return (

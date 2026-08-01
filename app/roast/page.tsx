@@ -23,6 +23,7 @@ export default function RoastPage() {
 
   useEffect(() => {
     const sb = createClient();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- cache client, intentional
     setSupabase(sb);
     sb.auth.getUser().then(({ data }) => setUser(data.user));
     const { data: { subscription } } = sb.auth.onAuthStateChange((_, session) => {

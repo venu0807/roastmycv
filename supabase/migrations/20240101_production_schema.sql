@@ -192,7 +192,7 @@ CREATE POLICY "Users can update own profile" ON public.profiles
 CREATE POLICY "Users can view own roasts" ON public.roasts
     FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Anyone can view roast by token" ON public.roasts
-    FOR SELECT USING (true);
+    FOR SELECT USING (share_token IS NOT NULL);
 CREATE POLICY "Service role can insert roasts" ON public.roasts
     FOR INSERT WITH CHECK (true);
 CREATE POLICY "Service role can update roasts" ON public.roasts
@@ -592,12 +592,19 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- =============================================================================
 GRANT EXECUTE ON FUNCTION public.check_roast_access(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.increment_roast_count(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.grant_download_credit(UUID, INT) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.consume_download_credit(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.update_user_tier(UUID, TEXT) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.update_user_tier_with_expiry(UUID, TEXT, INT) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.create_team(TEXT, UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.add_team_member(UUID, UUID, TEXT) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.remove_team_member(UUID, UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.add_team_wallet(UUID, INT, TEXT) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.deduct_team_wallet(UUID, INT) TO authenticated;
+
+-- CRITICAL FIX: the following are SECURITY DEFINER and were callable by any
+-- authenticated user (explicit grant + default PUBLIC EXECUTE), enabling free
+-- tier self-upgrades (update_user_tier*), unlimited download credits
+-- (grant_download_credit), and team-tier self-escalation / team-wallet theft
+-- (create_team, add/remove_team_member, add/deduct_team_wallet). All are only
+-- invoked server-side with the service role (webhooks / adminClient).
+REVOKE EXECUTE ON FUNCTION public.grant_download_credit(UUID, INT) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.consume_download_credit(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_user_tier(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_user_tier_with_expiry(UUID, TEXT, INT) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.create_team(TEXT, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.add_team_member(UUID, UUID, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.remove_team_member(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.add_team_wallet(UUID, INT, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.deduct_team_wallet(UUID, INT) FROM PUBLIC, anon, authenticated;

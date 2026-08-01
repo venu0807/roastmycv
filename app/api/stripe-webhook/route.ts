@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       if (tier === 'starter') {
         await supabase.rpc('grant_download_credit', { grant_user_id: userId, credits: 1 });
       } else if (tier === 'lifetime') {
-        await supabase.rpc('update_user_tier', { user_id: userId, new_tier: 'lifetime' });
+        await supabase.rpc('update_user_tier', { user_id: userId, new_tier: 'power' });
       } else if (tier === 'team') {
         const teamId = metadata.teamId;
         const amount = parseInt(metadata.wallet_amount || '500', 10);
