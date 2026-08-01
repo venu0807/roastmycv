@@ -1,0 +1,19 @@
+{
+  "installCommand": "npm install --legacy-peer-deps",
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "functions": {
+    "api/optimize/route.ts": {
+      "maxDuration": 120
+    },
+    "api/roast/route.ts": {
+      "maxDuration": 60
+    },
+    "api/cover-letter/route.ts": {
+      "maxDuration": 60
+    },
+    "api/skill-roadmap/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

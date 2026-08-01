@@ -1,25 +1,23 @@
-# roastmycv
+# RoastMyCV
 
-AI-powered CV feedback. Upload a PDF, get an instant roast plus actionable recommendations on ATS-readiness, formatting, and impact.
+**AI-powered resume roasting — brutal honesty on what's wrong with your CV, what recruiters really think, and exactly how to fix it in 30 seconds.** Upload a PDF, get an instant roast plus actionable recommendations on ATS-readiness, formatting, and impact.
 
 ## Features
 
-- PDF upload and parsing
-- AI-generated critique: tone (roast) + constructive analysis
-- ATS-readiness scoring
-- Sectioned feedback: formatting, content, impact
-- Anonymous mock review flow
-- Rate limiting via Upstash Redis
-- Supabase auth (email-based sessions)
-- Sentry error tracking (client, server, edge)
-- Containerized for reproducible local dev
+- 🔥 **Brutal honesty** — No sugar-coating. AI tells you exactly what recruiters think
+- 📋 **Action plan** — Step-by-step fix plan, priority-ordered from critical to nice-to-have
+- ⚡ **30 seconds** — Upload PDF/DOCX, get roasted instantly
+- 🤖 **Sectioned feedback** — Formatting, content, impact, and ATS-readiness scoring
+- 💰 **Free tier** — 1 roast/day. Pro: ₹299/mo unlimited
+- 🔒 **Anonymous mock review flow**
 
 ## Tech Stack
 
 | Layer | Choice |
 |-------|--------|
-| Framework | Next.js (app router) |
-| Auth / DB | Supabase (`@supabase/auth-helpers-nextjs`, `@supabase/ssr`, `supabase-js`) |
+| Framework | Next.js 16 (App Router) |
+| AI | Groq (Llama 3) for fast inference |
+| Auth / DB | Supabase PostgreSQL (Google OAuth + Email) |
 | PDF | `canvas` |
 | Rate limit | Upstash Redis (`@upstash/ratelimit`) |
 | Error tracking | Sentry |
